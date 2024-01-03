@@ -1,56 +1,116 @@
 import * as vscode from 'vscode';
-import * as fs from 'fs';
-import * as path from 'path';
 import * as childProcess from 'child_process';
 
 export interface Module {
+    type: 'module';
     name: string;
-    versions: Version[];
 }
 
-export interface Version {
-    version: string;
-    exportedCommands: string[];
+export interface Command {
+    type: 'command';
+    name: string;
 }
 
-export class PowerShellModuleProvider implements vscode.TreeDataProvider<Module | Version> {
-    private modules: Module[] | undefined;
+export type TreeItemData = Module | Command;
 
-    getTreeItem(element: Module | Version): vscode.TreeItem {
-        let command: vscode.Command | undefined;
-        if ('versions' in element) {
-            // When a module is clicked, execute a command to show the versions of the module
-            command = {
-                command: 'extension.showVersions',
-                arguments: [element],
-                title: 'Show Versions'
-            };
-        } else {
-            // When a version is clicked, execute a command to show the exported commands of the version
-            command = {
-                command: 'extension.showExportedCommands',
-                arguments: [element],
-                title: 'Show Exported Commands'
-            };
+export class PowershellModuleProvider implements vscode.TreeDataProvider<TreeItemData> {
+    private _onDidChangeTreeData: vscode.EventEmitter<Module | undefined> = new vscode.EventEmitter<Module | undefined>();
+    readonly onDidChangeTreeData: vscode.Event<Module | undefined> = this._onDidChangeTreeData.event;
+
+    refresh(): void {
+        this._onDidChangeTreeData.fire(undefined);
+    }
+    private getExportedCommands(moduleName: string): Promise<string[]> {
+        return new Promise((resolve, reject) => {
+            try {
+                // Log the module name
+                console.log(`Getting exported commands for module ${moduleName}`);
+    
+                // Construct and log the actual command being executed
+                const commandToExecute = `pwsh.exe -Command "Get-Command -Module ${moduleName} | Select-Object Name | Sort-Object Name"`;
+                console.log("Executing PowerShell Command:", commandToExecute);
+    
+                // Execute the PowerShell command
+                let psOutput = childProcess.execSync(commandToExecute).toString().trim();
+                console.log("PowerShell Output:", psOutput);
+    
+                if (!psOutput) {
+                    console.log("No output from PowerShell command.");
+                    return resolve([]);
+                }
+    
+                // Parse and resolve the command names
+                const commandLines = psOutput.split('\n').slice(2);
+                let commands = commandLines.map(line => line.trim());
+                resolve(commands);
+            } catch (error) {
+                // Log the error
+                console.error("Error executing PowerShell command:", error);
+                reject(error);
+            }
+        });
+    }
+    getTreeItem(element: TreeItemData): vscode.TreeItem {
+        let command;
+        switch (element.type) {
+            case 'module':
+                break;
+            case 'command':
+                command = {
+                    command: 'extension.openCommandDetails',
+                    arguments: [element.name],
+                    title: 'Split Editor Down'
+                };
+                break;
         }
         return {
-            label: 'versions' in element ? element.name : element.version,
-            collapsibleState: vscode.TreeItemCollapsibleState.Collapsed,
+            label: element.name,
+            collapsibleState: element.type === 'command' ? vscode.TreeItemCollapsibleState.None : vscode.TreeItemCollapsibleState.Collapsed,
             command: command
         };
     }
 
-    getChildren(element?: Module | Version): Thenable<(Module | Version)[]> {
+    getChildren(element?: TreeItemData): Thenable<TreeItemData[]> {
         if (!element) {
-            // Load the list of modules
             return this.getModules();
-        } else if ('versions' in element) {
-            // Load the versions of the selected module
-            return Promise.resolve(element.versions);
+        } else if (element.type === 'module') {
+            return this.getExportedCommands(element.name).then(commands => {
+                return commands.map(commandName => ({ type: 'command', name: commandName }));
+            });
         } else {
-            // Load the exported commands of the selected version
-            return Promise.resolve(element.exportedCommands.map(command => ({ name: command, version: '', exportedCommands: [] })));
+            // If we have a command, there are no children
+            return Promise.resolve([]);
         }
+    }
+    getCommandDetails(commandName: string): Promise<{ parameterSets: { [name: string]: { requiredParameters: string[], optionalParameters: string[] } }, defaultParameterSet: string }> {
+        return new Promise((resolve, reject) => {
+            try {
+                const commandToExecute = `pwsh.exe -Command "(Get-Command ${commandName}).ParameterSets | ForEach-Object { $_.Name + '|' + ($_.Parameters | Where-Object { $_.IsMandatory } | Select-Object -ExpandProperty Name) + '|' + ($_.Parameters | Where-Object { !$_.IsMandatory } | Select-Object -ExpandProperty Name) }"`;
+                let psOutput = childProcess.execSync(commandToExecute).toString().trim();
+                console.log("PowerShell Output:", psOutput);
+                const parameterSetsLines = psOutput.split('\n');
+    
+                const parameterSets: { [name: string]: { requiredParameters: string[], optionalParameters: string[] } } = {};
+                let defaultParameterSet = '';
+    
+                for (const line of parameterSetsLines) {
+                    const [name, requiredParametersString, optionalParametersString] = line.split('|');
+                    const requiredParameters = requiredParametersString.split(' ').map(param => param.trim());
+                    const optionalParameters = optionalParametersString.split(' ').map(param => param.trim());
+    
+                    parameterSets[name] = { requiredParameters, optionalParameters };
+    
+                    if (name === '(Default)') {
+                        defaultParameterSet = name;
+                    }
+                }
+    
+                resolve({ parameterSets, defaultParameterSet });
+            } catch (error) {
+                console.error("Error executing PowerShell command:", error);
+                reject(error);
+            }
+        });
     }
 
     private getModules(): Promise<Module[]> {
@@ -70,24 +130,16 @@ export class PowerShellModuleProvider implements vscode.TreeDataProvider<Module 
     
             // Parse each line to create Module objects
             let modules = moduleLines.map(line => {
-                // Split each line by whitespace or custom delimiter to get name, version, and module path
                 const parts = line.trim().split(/\s+/);
                 const name = parts[0];
-                const version = parts[1];
-                const moduleBase = parts[2]; // Assuming the path is the third part
-    
+            
                 return {
+                    type: 'module' as const,
                     name: name,
-                    versions: [{
-                        version: version,
-                        exportedCommands: [], // Additional logic may be required to populate this
-                    }]
                 };
             });
     
-            // Assign the parsed modules
-            this.modules = modules;
-            resolve(this.modules);
-        });
+            resolve(modules);
+        });    
     }
 }
