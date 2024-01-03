@@ -24,7 +24,16 @@ export function activate(context: vscode.ExtensionContext) {
             const selected = parameterSetName === defaultParameterSet ? ' selected' : '';
             formHtml += `<option value="${parameterSetName}"${selected}>${parameterSetName}</option>`;
         }
-        formHtml += `</select><div id="parameters"></div><input type="submit" value="Copy Command"></form>`;
+        formHtml += `</select><br><br><div style="text-align: left;"><input type="submit" value="Copy Command"></div><div id="parameters"></div></form>`;
+        formHtml += `<style>
+            .parameter-label {
+                display: block;
+                margin-bottom: 5px;
+            }
+            .parameter-input {
+                margin-bottom: 10px;
+            }
+        </style>`;
     
         formHtml += `<script>
             const vscode = acquireVsCodeApi();
@@ -34,16 +43,31 @@ export function activate(context: vscode.ExtensionContext) {
                 const parameterSet = document.getElementById('parameterSet').value;
                 const parametersDiv = document.getElementById('parameters');
                 parametersDiv.innerHTML = '';
+            
+                const commonParameters = ['Debug', 'ErrorAction', 'ErrorVariable', 'InformationAction', 'InformationVariable', 'OutBuffer', 'OutVariable', 'PipelineVariable', 'Verbose', 'WarningAction', 'WarningVariable'];
+                
+                let uniqueParametersHtml = '<div id="uniqueParameters" style="width: 50%; float: left;"><h2>Unique Parameters</h2>';
+                let commonParametersHtml = '<div id="commonParameters" style="width: 50%; float: right;"><h2>Common Parameters</h2>';
+            
                 for (const parameter of parameterSets[parameterSet].requiredParameters) {
-                    if (parameter !== '') {
-                        parametersDiv.innerHTML += '<div><label><b>' + parameter + ': </b></label><input name="' + parameter + '" required></div>';
+                    if (parameter !== '' && !commonParameters.includes(parameter)) {
+                        uniqueParametersHtml += '<div><label class="parameter-label"><b>' + parameter + ': </b></label><input class="parameter-input" name="' + parameter + '" required></div>';
+                    } else if (parameter !== '') {
+                        commonParametersHtml += '<div><label class="parameter-label"><b>' + parameter + ': </b></label><input class="parameter-input" name="' + parameter + '" required></div>';
                     }
                 }
                 for (const parameter of parameterSets[parameterSet].optionalParameters) {
-                    if (parameter !== '') {
-                        parametersDiv.innerHTML += '<div><label>' + parameter + ': </label><input name="' + parameter + '"></div>';
+                    if (parameter !== '' && !commonParameters.includes(parameter)) {
+                        uniqueParametersHtml += '<div><label class="parameter-label">' + parameter + ': </label><input class="parameter-input" name="' + parameter + '"></div>';
+                    } else if (parameter !== '') {
+                        commonParametersHtml += '<div><label class="parameter-label">' + parameter + ': </label><input class="parameter-input" name="' + parameter + '"></div>';
                     }
                 }
+            
+                uniqueParametersHtml += '</div>';
+                commonParametersHtml += '</div>';
+            
+                parametersDiv.innerHTML = uniqueParametersHtml + commonParametersHtml;
             }
             updateForm();
             document.querySelector('form').addEventListener('submit', function(event) {

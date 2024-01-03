@@ -27,7 +27,7 @@ export class PowershellModuleProvider implements vscode.TreeDataProvider<TreeIte
                 console.log(`Getting exported commands for module ${moduleName}`);
     
                 // Construct and log the actual command being executed
-                const commandToExecute = `pwsh.exe -Command "Get-Command -Module ${moduleName} | Select-Object Name | Sort-Object Name"`;
+                const commandToExecute = `powershell.exe -Command "Get-Command -Module ${moduleName} | Select-Object Name | Sort-Object Name"`;
                 console.log("Executing PowerShell Command:", commandToExecute);
     
                 // Execute the PowerShell command
@@ -85,7 +85,7 @@ export class PowershellModuleProvider implements vscode.TreeDataProvider<TreeIte
     getCommandDetails(commandName: string): Promise<{ parameterSets: { [name: string]: { requiredParameters: string[], optionalParameters: string[] } }, defaultParameterSet: string }> {
         return new Promise((resolve, reject) => {
             try {
-                const commandToExecute = `pwsh.exe -Command "(Get-Command ${commandName}).ParameterSets | ForEach-Object { $_.Name + '|' + ($_.Parameters | Where-Object { $_.IsMandatory } | Select-Object -ExpandProperty Name) + '|' + ($_.Parameters | Where-Object { !$_.IsMandatory } | Select-Object -ExpandProperty Name) }"`;
+                const commandToExecute = `powershell.exe -Command "(Get-Command ${commandName}).ParameterSets | ForEach-Object { $_.Name + '|' + ($_.Parameters | Where-Object { $_.IsMandatory } | Select-Object -ExpandProperty Name) + '|' + ($_.Parameters | Where-Object { !$_.IsMandatory } | Select-Object -ExpandProperty Name) }"`;
                 let psOutput = childProcess.execSync(commandToExecute).toString().trim();
                 console.log("PowerShell Output:", psOutput);
                 const parameterSetsLines = psOutput.split('\n');
