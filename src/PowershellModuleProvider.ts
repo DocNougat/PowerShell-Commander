@@ -82,21 +82,27 @@ export class PowershellModuleProvider implements vscode.TreeDataProvider<TreeIte
             return Promise.resolve([]);
         }
     }
-    getCommandDetails(commandName: string): Promise<{ parameterSets: { [name: string]: { requiredParameters: string[], optionalParameters: string[] } }, defaultParameterSet: string }> {
+    getCommandDetails(commandName: string): Promise<{ parameterSets: { [name: string]: { requiredParameters: {name: string, type: string}[], optionalParameters: {name: string, type: string}[] } }, defaultParameterSet: string }> {
         return new Promise((resolve, reject) => {
             try {
-                const commandToExecute = `powershell.exe -Command "(Get-Command ${commandName}).ParameterSets | ForEach-Object { $_.Name + '|' + ($_.Parameters | Where-Object { $_.IsMandatory } | Select-Object -ExpandProperty Name) + '|' + ($_.Parameters | Where-Object { !$_.IsMandatory } | Select-Object -ExpandProperty Name) }"`;
+                const commandToExecute = `powershell.exe -Command "(Get-Command ${commandName}).ParameterSets | ForEach-Object { $_.Name + '|' + ($_.Parameters | Where-Object { $_.IsMandatory } | ForEach-Object { $_.Name + ',' + $_.ParameterType }) + '|' + ($_.Parameters | Where-Object { !$_.IsMandatory } | ForEach-Object { $_.Name + ',' + $_.ParameterType }) }"`;
                 let psOutput = childProcess.execSync(commandToExecute).toString().trim();
                 console.log("PowerShell Output:", psOutput);
                 const parameterSetsLines = psOutput.split('\n');
     
-                const parameterSets: { [name: string]: { requiredParameters: string[], optionalParameters: string[] } } = {};
+                const parameterSets: { [name: string]: { requiredParameters: {name: string, type: string}[], optionalParameters: {name: string, type: string}[] } } = {};
                 let defaultParameterSet = '';
     
                 for (const line of parameterSetsLines) {
                     const [name, requiredParametersString, optionalParametersString] = line.split('|');
-                    const requiredParameters = requiredParametersString.split(' ').map(param => param.trim());
-                    const optionalParameters = optionalParametersString.split(' ').map(param => param.trim());
+                    const requiredParameters = requiredParametersString.split(' ').map(param => {
+                        const [paramName, paramType] = param.split(',');
+                        return {name: paramName.trim(), type: paramType.trim()};
+                    });
+                    const optionalParameters = optionalParametersString.split(' ').map(param => {
+                        const [paramName, paramType] = param.split(',');
+                        return {name: paramName.trim(), type: paramType.trim()};
+                    });
     
                     parameterSets[name] = { requiredParameters, optionalParameters };
     

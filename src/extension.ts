@@ -12,13 +12,13 @@ export function activate(context: vscode.ExtensionContext) {
     context.subscriptions.push(vscode.commands.registerCommand('extension.openCommandDetails', async (commandName: string) => {
         const panel = vscode.window.createWebviewPanel(
             'commandDetails',
-            'Command Details',
-            vscode.ViewColumn.Beside,
+            `${commandName} Details`,
+            vscode.ViewColumn.Two,
             { enableScripts: true } // Enable JavaScript in the webview
         );
-    
+
         const { parameterSets, defaultParameterSet } = await provider.getCommandDetails(commandName);
-    
+
         let formHtml = `<form><h1>${commandName}</h1><select id="parameterSet" onchange="updateForm()">`;
         for (const parameterSetName of Object.keys(parameterSets).sort()) {
             const selected = parameterSetName === defaultParameterSet ? ' selected' : '';
@@ -34,7 +34,7 @@ export function activate(context: vscode.ExtensionContext) {
                 margin-bottom: 10px;
             }
         </style>`;
-    
+
         formHtml += `<script>
             const vscode = acquireVsCodeApi();
             const parameterSets = ${JSON.stringify(parameterSets)};
@@ -43,30 +43,49 @@ export function activate(context: vscode.ExtensionContext) {
                 const parameterSet = document.getElementById('parameterSet').value;
                 const parametersDiv = document.getElementById('parameters');
                 parametersDiv.innerHTML = '';
-            
+
                 const commonParameters = ['Debug', 'ErrorAction', 'ErrorVariable', 'InformationAction', 'InformationVariable', 'OutBuffer', 'OutVariable', 'PipelineVariable', 'Verbose', 'WarningAction', 'WarningVariable'];
-                
+
                 let uniqueParametersHtml = '<div id="uniqueParameters" style="width: 50%; float: left;"><h2>Unique Parameters</h2>';
                 let commonParametersHtml = '<div id="commonParameters" style="width: 50%; float: right;"><h2>Common Parameters</h2>';
-            
-                for (const parameter of parameterSets[parameterSet].requiredParameters) {
-                    if (parameter !== '' && !commonParameters.includes(parameter)) {
-                        uniqueParametersHtml += '<div><label class="parameter-label"><b>' + parameter + ': </b></label><input class="parameter-input" name="' + parameter + '" required></div>';
+
+                const sortedRequiredParameters = parameterSets[parameterSet].requiredParameters.sort((a, b) => a.name.localeCompare(b.name));
+                const sortedOptionalParameters = parameterSets[parameterSet].optionalParameters.sort((a, b) => a.name.localeCompare(b.name));
+
+                for (const parameter of sortedRequiredParameters) {
+                    if (parameter !== '' && !commonParameters.includes(parameter.name)) {
+                        if (parameter.type === 'switch') {
+                            uniqueParametersHtml += '<div><label class="parameter-label"><b>' + parameter.name + '*: </b></label><input class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '" type="checkbox" checked></div>';
+                        } else {
+                            uniqueParametersHtml += '<div><label class="parameter-label"><b>' + parameter.name + '*: </b></label><input class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '" required></div>';
+                        }
                     } else if (parameter !== '') {
-                        commonParametersHtml += '<div><label class="parameter-label"><b>' + parameter + ': </b></label><input class="parameter-input" name="' + parameter + '" required></div>';
+                        if (parameter.type === 'switch') {
+                            commonParametersHtml += '<div><label class="parameter-label"><b>' + parameter.name + '*: </b></label><input class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '" type="checkbox" checked></div>';
+                        } else {
+                            commonParametersHtml += '<div><label class="parameter-label"><b>' + parameter.name + '*: </b></label><input class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '" required></div>';
+                        }
                     }
                 }
-                for (const parameter of parameterSets[parameterSet].optionalParameters) {
-                    if (parameter !== '' && !commonParameters.includes(parameter)) {
-                        uniqueParametersHtml += '<div><label class="parameter-label">' + parameter + ': </label><input class="parameter-input" name="' + parameter + '"></div>';
+                for (const parameter of sortedOptionalParameters) {
+                    if (parameter !== '' && !commonParameters.includes(parameter.name)) {
+                        if (parameter.type === 'switch') {
+                            uniqueParametersHtml += '<div><label class="parameter-label">' + parameter.name + ': </label><input class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '" type="checkbox"></div>';
+                        } else {
+                            uniqueParametersHtml += '<div><label class="parameter-label">' + parameter.name + ': </label><input class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '"></div>';
+                        }
                     } else if (parameter !== '') {
-                        commonParametersHtml += '<div><label class="parameter-label">' + parameter + ': </label><input class="parameter-input" name="' + parameter + '"></div>';
+                        if (parameter.type === 'switch') {
+                            commonParametersHtml += '<div><label class="parameter-label">' + parameter.name + ': </label><input class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '" type="checkbox"></div>';
+                        } else {
+                            commonParametersHtml += '<div><label class="parameter-label">' + parameter.name + ': </label><input class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '"></div>';
+                        }
                     }
                 }
-            
+
                 uniqueParametersHtml += '</div>';
                 commonParametersHtml += '</div>';
-            
+
                 parametersDiv.innerHTML = uniqueParametersHtml + commonParametersHtml;
             }
             updateForm();
@@ -75,16 +94,22 @@ export function activate(context: vscode.ExtensionContext) {
                 let commandString = commandName;
                 for (const input of document.querySelectorAll('input')) {
                     if (input.type !== 'submit' && input.value !== '') {
-                        if(input.value == "true" || input.value == "false") {
-                            input.value = "$" + input.value;
+                        if (input.type === 'checkbox') {
+                            if (input.checked) {
+                                commandString += ' -' + input.name;
+                            }
+                        } else {
+                            if (input.value == "true" || input.value == "false") {
+                                input.value = "$" + input.value;
+                            }
+                            commandString += ' -' + input.name + ' ' + input.value;
                         }
-                        commandString += ' -' + input.name + ' ' + input.value;
                     }
                 }
                 navigator.clipboard.writeText(commandString);
             });
         </script>`;
-    
+
         panel.webview.html = formHtml;
     }));
 }
