@@ -1,7 +1,7 @@
 {
   "name": "powershell-commander",
   "publisher": "DocNougat",
-  "displayName": "powershell-commander",
+  "displayName": "PowerShell Commander",
   "description": "A Powershell Module browser & Command Builder for VSCode",
   "version": "1.0.0",
   "engines": {

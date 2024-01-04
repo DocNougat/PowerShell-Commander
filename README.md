@@ -1,6 +1,6 @@
 # PowerShell Commander
 
-This is a Visual Studio Code extension developed by Alex Heimbuch. The extension replicates the functionality of the PowerShell ISE Command Pane, providing a convenient interface for browsing and executing PowerShell commands.
+This is a Visual Studio Code extension developed by Alex Heimbuch to replicate the functionality of the PowerShell ISE Command Pane, providing a convenient interface for browsing and building PowerShell commands.
 
 ## Features
 
