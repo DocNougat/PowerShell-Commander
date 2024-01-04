@@ -1,8 +1,9 @@
 {
-  "name": "powershell-module-browser",
-  "displayName": "powershell-module-browser",
-  "description": "A Powershell Module browser for VSCode",
-  "version": "0.0.1",
+  "name": "powershell-commander",
+  "publisher": "DocNougat",
+  "displayName": "powershell-commander",
+  "description": "A Powershell Module browser & Command Builder for VSCode",
+  "version": "1.0.0",
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -16,7 +17,7 @@
       "activitybar": [
           {
               "id": "powerShellModules",
-              "title": "PowerShell Command Browser",
+              "title": "PowerShell Commander",
               "icon": "media/icon.svg"
           }
       ]
@@ -48,5 +49,9 @@
     "typescript": "^5.3.3",
     "@vscode/test-cli": "^0.0.4",
     "@vscode/test-electron": "^2.3.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/DocNougat/PowerShell-Commander.git"
   }
 }
