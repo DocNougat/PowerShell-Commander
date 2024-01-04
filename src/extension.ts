@@ -34,7 +34,6 @@ export function activate(context: vscode.ExtensionContext) {
                 margin-bottom: 10px;
             }
         </style>`;
-        console.log("extension.ts Input:", parameterSets);
         formHtml += `<script>
             const vscode = acquireVsCodeApi();
             const parameterSets = ${JSON.stringify(parameterSets)};
