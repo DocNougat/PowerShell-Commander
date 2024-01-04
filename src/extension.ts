@@ -34,7 +34,7 @@ export function activate(context: vscode.ExtensionContext) {
                 margin-bottom: 10px;
             }
         </style>`;
-
+        console.log("extension.ts Input:", parameterSets);
         formHtml += `<script>
             const vscode = acquireVsCodeApi();
             const parameterSets = ${JSON.stringify(parameterSets)};
@@ -54,13 +54,25 @@ export function activate(context: vscode.ExtensionContext) {
 
                 for (const parameter of sortedRequiredParameters) {
                     if (parameter.name !== '' && !commonParameters.includes(parameter.name)) {
-                        if (parameter.type === 'switch') {
+                        if (parameter.validateSet && parameter.validateSet.length > 0) {
+                            uniqueParametersHtml += '<div><label class="parameter-label"><b>' + parameter.name + '*: </b></label><select class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '">';
+                            for (const option of parameter.validateSet) {
+                                uniqueParametersHtml += '<option value="' + option + '">' + option + '</option>';
+                            }
+                            uniqueParametersHtml += '</select></div>';
+                        } else if (parameter.type === 'SwitchParameter') {
                             uniqueParametersHtml += '<div><label class="parameter-label"><b>' + parameter.name + '*: </b></label><input class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '" type="checkbox" checked></div>';
                         } else {
                             uniqueParametersHtml += '<div><label class="parameter-label"><b>' + parameter.name + '*: </b></label><input class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '" required></div>';
                         }
                     } else if (parameter.name !== '') {
-                        if (parameter.type === 'switch') {
+                        if (parameter.validateSet && parameter.validateSet.length > 0) {
+                            commonParametersHtml += '<div><label class="parameter-label"><b>' + parameter.name + '*: </b></label><select class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '">';
+                            for (const option of parameter.validateSet) {
+                                commonParametersHtml += '<option value="' + option + '">' + option + '</option>';
+                            }
+                            commonParametersHtml += '</select></div>';
+                        } else if (parameter.type === 'SwitchParameter') {
                             commonParametersHtml += '<div><label class="parameter-label"><b>' + parameter.name + '*: </b></label><input class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '" type="checkbox" checked></div>';
                         } else {
                             commonParametersHtml += '<div><label class="parameter-label"><b>' + parameter.name + '*: </b></label><input class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '" required></div>';
@@ -69,13 +81,26 @@ export function activate(context: vscode.ExtensionContext) {
                 }
                 for (const parameter of sortedOptionalParameters) {
                     if (parameter.name !== '' && !commonParameters.includes(parameter.name)) {
-                        if (parameter.type === 'switch') {
+                        if (parameter.validateSet && parameter.validateSet.length > 0) {
+                            uniqueParametersHtml += '<div><label class="parameter-label">' + parameter.name + ': </label><select class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '">';
+                            uniqueParametersHtml += '<option value="">None</option>';
+                            for (const option of parameter.validateSet) {
+                                uniqueParametersHtml += '<option value="' + option + '">' + option + '</option>';
+                            }
+                            uniqueParametersHtml += '</select></div>';
+                        } else if (parameter.type === 'SwitchParameter') {
                             uniqueParametersHtml += '<div><label class="parameter-label">' + parameter.name + ': </label><input class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '" type="checkbox"></div>';
                         } else {
                             uniqueParametersHtml += '<div><label class="parameter-label">' + parameter.name + ': </label><input class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '"></div>';
                         }
                     } else if (parameter.name !== '') {
-                        if (parameter.type === 'switch') {
+                        if (parameter.validateSet && parameter.validateSet.length > 0) {
+                            commonParametersHtml += '<div><label class="parameter-label">' + parameter.name + ': </label><select class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '">';
+                            for (const option of parameter.validateSet) {
+                                commonParametersHtml += '<option value="' + option + '">' + option + '</option>';
+                            }
+                            commonParametersHtml += '</select></div>';
+                        } else if (parameter.type === 'SwitchParameter') {
                             commonParametersHtml += '<div><label class="parameter-label">' + parameter.name + ': </label><input class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '" type="checkbox"></div>';
                         } else {
                             commonParametersHtml += '<div><label class="parameter-label">' + parameter.name + ': </label><input class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '"></div>';
@@ -92,17 +117,21 @@ export function activate(context: vscode.ExtensionContext) {
             document.querySelector('form').addEventListener('submit', function(event) {
                 event.preventDefault();
                 let commandString = commandName;
-                for (const input of document.querySelectorAll('input')) {
-                    if (input.type !== 'submit' && input.value !== '') {
+                for (const input of document.querySelectorAll('input, select')) {
+                    if (input.type !== 'submit' && input.value !== '' && input.id !== 'parameterSet') {
                         if (input.type === 'checkbox') {
                             if (input.checked) {
                                 commandString += ' -' + input.name;
                             }
                         } else {
-                            if (input.value == "true" || input.value == "false") {
-                                input.value = "$" + input.value;
+                            if (input.value.includes(' ')) {
+                                commandString += ' -' + input.name + ' "' + input.value + '"';
+                            } else {
+                                if (input.value == "true" || input.value == "false") {
+                                    input.value = "$" + input.value;
+                                }
+                                commandString += ' -' + input.name + ' ' + input.value;
                             }
-                            commandString += ' -' + input.name + ' ' + input.value;
                         }
                     }
                 }

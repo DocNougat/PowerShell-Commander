@@ -82,27 +82,50 @@ export class PowershellModuleProvider implements vscode.TreeDataProvider<TreeIte
             return Promise.resolve([]);
         }
     }
-    getCommandDetails(commandName: string): Promise<{ parameterSets: { [name: string]: { requiredParameters: {name: string, type: string}[], optionalParameters: {name: string, type: string}[] } }, defaultParameterSet: string }> {
+    getCommandDetails(commandName: string): Promise<{
+        parameterSets: {
+            [name: string]: {
+                requiredParameters: { name: string, type: string, validateSet?: string[] }[],
+                optionalParameters: { name: string, type: string, validateSet?: string[] }[]
+            }
+        },
+        defaultParameterSet: string
+    }> {
         return new Promise((resolve, reject) => {
             try {
-                const commandToExecute = `powershell.exe -Command "(Get-Command ${commandName}).ParameterSets | ForEach-Object { $_.Name + '|' + ($_.Parameters | Where-Object { $_.IsMandatory } | ForEach-Object { $_.Name + ',' + $_.ParameterType }) + '|' + ($_.Parameters | Where-Object { !$_.IsMandatory } | ForEach-Object { $_.Name + ',' + $_.ParameterType }) }"`;
+                const commandToExecute = `powershell.exe -Command "(Get-Command ${commandName}).ParameterSets | % { $_.Name + '|' + ($_.Parameters | ? { $_.IsMandatory } | % { $_.Name + ',' + $_.ParameterType.Name + ',' + (($_.Attributes | ? { $_ -is [System.Management.Automation.ValidateSetAttribute] }).ValidValues -join ';') }) + '|' + ($_.Parameters | ? { !$_.IsMandatory } | % { $_.Name + ',' + $_.ParameterType.Name + ',' + (($_.Attributes | ? { $_ -is [System.Management.Automation.ValidateSetAttribute] }).ValidValues -join ';') }) }"`;
+                console.log("Executing PowerShell Command:", commandToExecute);
                 let psOutput = childProcess.execSync(commandToExecute).toString().trim();
                 console.log("PowerShell Output:", psOutput);
                 const parameterSetsLines = psOutput.split('\n');
     
-                const parameterSets: { [name: string]: { requiredParameters: {name: string, type: string}[], optionalParameters: {name: string, type: string}[] } } = {};
+                const parameterSets: {
+                    [name: string]: {
+                        requiredParameters: { name: string, type: string, validateSet?: string[] }[],
+                        optionalParameters: { name: string, type: string, validateSet?: string[] }[]
+                    }
+                } = {};
                 let defaultParameterSet = '';
     
                 for (const line of parameterSetsLines) {
                     const [name, requiredParametersString, optionalParametersString] = line.split('|');
-                    const requiredParameters = requiredParametersString.split(' ').map(param => {
-                        const [paramName, paramType] = param.split(',');
-                        return {name: paramName ? paramName.trim() : '', type: paramType ? paramType.trim() : ''};
-                    });
-                    const optionalParameters = optionalParametersString.split(' ').map(param => {
-                        const [paramName, paramType] = param.split(',');
-                        return {name: paramName ? paramName.trim() : '', type: paramType ? paramType.trim() : ''};
-                    });
+                    const requiredParameters = requiredParametersString ? requiredParametersString.split(' ').map(param => {
+                        const [paramName, paramType, validateSetString] = param.split(',');
+                        return {
+                            name: paramName ? paramName.trim() : '',
+                            type: paramType ? paramType.trim() : '',
+                            validateSet: validateSetString && validateSetString.trim() !== '' ? validateSetString.split(';') : []
+                        };
+                    }) : [];
+                    
+                    const optionalParameters = optionalParametersString ? optionalParametersString.split(' ').map(param => {
+                        const [paramName, paramType, validateSetString] = param.split(',');
+                        return {
+                            name: paramName ? paramName.trim() : '',
+                            type: paramType ? paramType.trim() : '',
+                            validateSet: validateSetString && validateSetString.trim() !== '' ? validateSetString.split(';') : []
+                        };
+                    }) : [];
     
                     parameterSets[name] = { requiredParameters, optionalParameters };
     
@@ -118,6 +141,7 @@ export class PowershellModuleProvider implements vscode.TreeDataProvider<TreeIte
             }
         });
     }
+    
 
     private getModules(): Promise<Module[]> {
         return new Promise(resolve => {
