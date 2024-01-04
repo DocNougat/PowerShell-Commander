@@ -53,13 +53,13 @@ export function activate(context: vscode.ExtensionContext) {
                 const sortedOptionalParameters = parameterSets[parameterSet].optionalParameters.sort((a, b) => a.name.localeCompare(b.name));
 
                 for (const parameter of sortedRequiredParameters) {
-                    if (parameter !== '' && !commonParameters.includes(parameter.name)) {
+                    if (parameter.name !== '' && !commonParameters.includes(parameter.name)) {
                         if (parameter.type === 'switch') {
                             uniqueParametersHtml += '<div><label class="parameter-label"><b>' + parameter.name + '*: </b></label><input class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '" type="checkbox" checked></div>';
                         } else {
                             uniqueParametersHtml += '<div><label class="parameter-label"><b>' + parameter.name + '*: </b></label><input class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '" required></div>';
                         }
-                    } else if (parameter !== '') {
+                    } else if (parameter.name !== '') {
                         if (parameter.type === 'switch') {
                             commonParametersHtml += '<div><label class="parameter-label"><b>' + parameter.name + '*: </b></label><input class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '" type="checkbox" checked></div>';
                         } else {
@@ -68,13 +68,13 @@ export function activate(context: vscode.ExtensionContext) {
                     }
                 }
                 for (const parameter of sortedOptionalParameters) {
-                    if (parameter !== '' && !commonParameters.includes(parameter.name)) {
+                    if (parameter.name !== '' && !commonParameters.includes(parameter.name)) {
                         if (parameter.type === 'switch') {
                             uniqueParametersHtml += '<div><label class="parameter-label">' + parameter.name + ': </label><input class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '" type="checkbox"></div>';
                         } else {
                             uniqueParametersHtml += '<div><label class="parameter-label">' + parameter.name + ': </label><input class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '"></div>';
                         }
-                    } else if (parameter !== '') {
+                    } else if (parameter.name !== '') {
                         if (parameter.type === 'switch') {
                             commonParametersHtml += '<div><label class="parameter-label">' + parameter.name + ': </label><input class="parameter-input" name="' + parameter.name + '" title="' + parameter.type + '" type="checkbox"></div>';
                         } else {

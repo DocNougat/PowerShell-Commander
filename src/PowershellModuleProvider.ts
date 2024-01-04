@@ -97,11 +97,11 @@ export class PowershellModuleProvider implements vscode.TreeDataProvider<TreeIte
                     const [name, requiredParametersString, optionalParametersString] = line.split('|');
                     const requiredParameters = requiredParametersString.split(' ').map(param => {
                         const [paramName, paramType] = param.split(',');
-                        return {name: paramName.trim(), type: paramType.trim()};
+                        return {name: paramName ? paramName.trim() : '', type: paramType ? paramType.trim() : ''};
                     });
                     const optionalParameters = optionalParametersString.split(' ').map(param => {
                         const [paramName, paramType] = param.split(',');
-                        return {name: paramName.trim(), type: paramType.trim()};
+                        return {name: paramName ? paramName.trim() : '', type: paramType ? paramType.trim() : ''};
                     });
     
                     parameterSets[name] = { requiredParameters, optionalParameters };
