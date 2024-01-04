@@ -3,6 +3,7 @@
   "publisher": "DocNougat",
   "displayName": "PowerShell Commander",
   "description": "A Powershell Module browser & Command Builder for VSCode",
+  "icon": "media/icon.png",
   "version": "1.0.0",
   "engines": {
     "vscode": "^1.85.0"
