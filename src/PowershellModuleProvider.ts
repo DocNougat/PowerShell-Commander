@@ -13,13 +13,31 @@ export interface Command {
 
 export type TreeItemData = Module | Command;
 
+/**
+ * Represents a provider for PowerShell modules in the VSCode tree view.
+ */
 export class PowershellModuleProvider implements vscode.TreeDataProvider<TreeItemData> {
+    /**
+     * Event that fires when the tree data changes.
+     */
     private _onDidChangeTreeData: vscode.EventEmitter<Module | undefined> = new vscode.EventEmitter<Module | undefined>();
+    /**
+     * Event that fires when the tree data changes.
+     */
     readonly onDidChangeTreeData: vscode.Event<Module | undefined> = this._onDidChangeTreeData.event;
 
+    /**
+     * Refreshes the tree data.
+     */
     refresh(): void {
         this._onDidChangeTreeData.fire(undefined);
     }
+
+    /**
+     * Retrieves the exported commands of a PowerShell module.
+     * @param moduleName The name of the module.
+     * @returns A promise that resolves to an array of exported command names.
+     */
     private getExportedCommands(moduleName: string): Promise<string[]> {
         return new Promise((resolve, reject) => {
             try {
@@ -45,6 +63,12 @@ export class PowershellModuleProvider implements vscode.TreeDataProvider<TreeIte
             }
         });
     }
+
+    /**
+     * Retrieves the tree item for a given element.
+     * @param element The element for which to retrieve the tree item.
+     * @returns The tree item representing the element.
+     */
     getTreeItem(element: TreeItemData): vscode.TreeItem {
         let command;
         switch (element.type) {
@@ -65,6 +89,11 @@ export class PowershellModuleProvider implements vscode.TreeDataProvider<TreeIte
         };
     }
 
+    /**
+     * Retrieves the children of a given element.
+     * @param element The element for which to retrieve the children.
+     * @returns A promise that resolves to an array of child elements.
+     */
     getChildren(element?: TreeItemData): Thenable<TreeItemData[]> {
         if (!element) {
             return this.getModules();
@@ -77,6 +106,12 @@ export class PowershellModuleProvider implements vscode.TreeDataProvider<TreeIte
             return Promise.resolve([]);
         }
     }
+
+    /**
+     * Retrieves the details of a PowerShell command.
+     * @param commandName The name of the command.
+     * @returns A promise that resolves to an object containing the parameter sets and the default parameter set.
+     */
     getCommandDetails(commandName: string): Promise<{
         parameterSets: {
             [name: string]: {
@@ -134,8 +169,11 @@ export class PowershellModuleProvider implements vscode.TreeDataProvider<TreeIte
             }
         });
     }
-    
 
+    /**
+     * Retrieves the modules available in the PowerShell environment.
+     * @returns A promise that resolves to an array of module objects.
+     */
     private getModules(): Promise<Module[]> {
         return new Promise(resolve => {
             let psOutput;

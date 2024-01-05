@@ -1,6 +1,11 @@
 import * as vscode from 'vscode';
 import { PowershellModuleProvider, Module, TreeItemData } from './PowershellModuleProvider';
 
+/**
+ * Activates the extension.
+ * 
+ * @param context - The extension context.
+ */
 export function activate(context: vscode.ExtensionContext) {
     const provider = new PowershellModuleProvider();
     vscode.window.registerTreeDataProvider('powershellModulesView', provider);
