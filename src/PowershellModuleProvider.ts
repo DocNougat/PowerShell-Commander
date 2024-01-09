@@ -44,13 +44,20 @@ export class PowershellModuleProvider implements vscode.TreeDataProvider<TreeIte
                 // Log the module name
     
                 // Construct and log the actual command being executed
-                const commandToExecute = `powershell.exe -Command "Get-Command -Module ${moduleName} | Select-Object Name | Sort-Object Name"`;
+                const commandToExecute = `pwsh.exe -Command "Get-Command -Module ${moduleName} | Select-Object Name | Sort-Object Name"`;
     
                 // Execute the PowerShell command
                 let psOutput = childProcess.execSync(commandToExecute).toString().trim();
     
                 if (!psOutput) {
-                    return resolve([]);
+                    const commandToExecute = `powershell.exe -Command "Get-Command -Module ${moduleName} | Select-Object Name | Sort-Object Name"`;
+                    let psOutput = childProcess.execSync(commandToExecute).toString().trim();
+                    if (!psOutput) {
+                        return resolve([]);
+                    }
+                    const commandLines = psOutput.split('\n').slice(2);
+                    let commands = commandLines.map(line => line.trim());
+                    resolve(commands);
                 }
     
                 // Parse and resolve the command names
@@ -123,7 +130,7 @@ export class PowershellModuleProvider implements vscode.TreeDataProvider<TreeIte
     }> {
         return new Promise((resolve, reject) => {
             try {
-                const commandToExecute = `powershell.exe -Command "(Get-Command ${commandName}).ParameterSets | % { $_.Name + '|' + ($_.Parameters | ? { $_.IsMandatory } | % { $_.Name + ',' + $_.ParameterType.Name + ',' + (($_.Attributes | ? { $_ -is [System.Management.Automation.ValidateSetAttribute] }).ValidValues -join ';') }) + '|' + ($_.Parameters | ? { !$_.IsMandatory } | % { $_.Name + ',' + $_.ParameterType.Name + ',' + (($_.Attributes | ? { $_ -is [System.Management.Automation.ValidateSetAttribute] }).ValidValues -join ';') }) }"`;
+                const commandToExecute = `pwsh.exe -Command "(Get-Command ${commandName}).ParameterSets | % { $_.Name + '|' + ($_.Parameters | ? { $_.IsMandatory } | % { $_.Name + ',' + $_.ParameterType.Name + ',' + (($_.Attributes | ? { $_ -is [System.Management.Automation.ValidateSetAttribute] }).ValidValues -join ';') }) + '|' + ($_.Parameters | ? { !$_.IsMandatory } | % { $_.Name + ',' + $_.ParameterType.Name + ',' + (($_.Attributes | ? { $_ -is [System.Management.Automation.ValidateSetAttribute] }).ValidValues -join ';') }) }"`;
                 let psOutput = childProcess.execSync(commandToExecute).toString().trim();
                 const parameterSetsLines = psOutput.split('\n');
     
