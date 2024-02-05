@@ -24,12 +24,12 @@ export function activate(context: vscode.ExtensionContext) {
 
         const { parameterSets, defaultParameterSet } = await provider.getCommandDetails(commandName);
 
-        let formHtml = `<form><h1>${commandName}</h1><select id="parameterSet" onchange="updateForm()">`;
+        let formHtml = `<form><h1>${commandName}</h1><h3>Parameter Set:</h3><select id="parameterSet" onchange="updateForm()">`;
         for (const parameterSetName of Object.keys(parameterSets).sort()) {
             const selected = parameterSetName === defaultParameterSet ? ' selected' : '';
             formHtml += `<option value="${parameterSetName}"${selected}>${parameterSetName}</option>`;
         }
-        formHtml += `</select><br><br><div style="text-align: left;"><input type="submit" value="Copy Command"></div><div id="parameters"></div></form>`;
+        formHtml += `</select><br><br><div style="text-align: left;"><input type="submit" value="Copy Command"><br><br><input type="button" id="clearButton" value="Clear"></div><div id="parameters"></div></form>`;
         formHtml += `<style>
             .parameter-label {
                 display: block;
@@ -122,7 +122,7 @@ export function activate(context: vscode.ExtensionContext) {
                 event.preventDefault();
                 let commandString = commandName;
                 for (const input of document.querySelectorAll('input, select')) {
-                    if (input.type !== 'submit' && input.value !== '' && input.id !== 'parameterSet') {
+                    if (input.type !== 'submit' && input.value !== '' && input.id !== 'parameterSet' && input.id !== 'clearButton') {
                         if (input.type === 'checkbox') {
                             if (input.checked) {
                                 commandString += ' -' + input.name;
@@ -140,6 +140,17 @@ export function activate(context: vscode.ExtensionContext) {
                     }
                 }
                 navigator.clipboard.writeText(commandString);
+            });
+            document.getElementById('clearButton').addEventListener('click', function() {
+                for (const input of document.querySelectorAll('input, select')) {
+                    if (input.type !== 'submit' && input.id !== 'parameterSet' && input.id !== 'clearButton') {
+                        if (input.type === 'checkbox') {
+                            input.checked = false;
+                        } else {
+                            input.value = '';
+                        }
+                    }
+                }
             });
         </script>`;
 
