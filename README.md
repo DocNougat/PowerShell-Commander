@@ -28,9 +28,13 @@ This extension contributes the following settings:
 Please report any issues you encounter while using this extension on the project's GitHub page.
 
 ## Release Notes
+### 1.0.2
+Added clear button to command builder form
+
+### 1.0.1
+Fixed issues with the way commdlets are processed
 
 ### 1.0.0
-
 Initial release of PowerShell Commander.
 
 ---
